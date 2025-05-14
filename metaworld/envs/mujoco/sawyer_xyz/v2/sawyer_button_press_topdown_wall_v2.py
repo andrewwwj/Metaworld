@@ -43,7 +43,6 @@ class SawyerButtonPressTopdownWallEnvV2(SawyerXYZEnv):
 
         goal_low = self.hand_low
         goal_high = self.hand_high
-
         self._random_reset_space = Box(
             np.array(obj_low), np.array(obj_high), dtype=np.float64
         )
@@ -111,7 +110,6 @@ class SawyerButtonPressTopdownWallEnvV2(SawyerXYZEnv):
         self._obj_to_target_init = abs(
             self._target_pos[2] - self._get_site_pos("buttonStart")[2]
         )
-
         return self._get_obs()
 
     def compute_reward(
@@ -150,7 +148,7 @@ class SawyerButtonPressTopdownWallEnvV2(SawyerXYZEnv):
         # reward = 5 * reward_utils.hamacher_product(tcp_closed, near_button)
         tcp_opened = max(obs[3], 0.0)
         reward = 5 * reward_utils.hamacher_product(tcp_opened, near_button)
-        if tcp_to_obj <= 0.03:
+        if tcp_to_obj <= 0.07:
             reward += 5 * button_pressed
-        print(reward)
+            
         return (reward, tcp_to_obj, obs[3], obj_to_target, near_button, button_pressed)
