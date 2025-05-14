@@ -130,7 +130,10 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
         # Rather than deal with an angle between quaternions, just approximate:
         ideal = np.array([0.707, 0, 0, 0.707])
         error = float(np.linalg.norm(obs[7:11] - ideal))
-        return max(1.0 - error / 0.2, 0.0)
+        y_min = 0.8
+        y_max = 1.0
+        # return max(1.0 - error / 0.2, 0.0)
+        return y_min + error * (y_max - y_min) / 0.2
 
     @staticmethod
     def _reward_pos(
@@ -200,8 +203,8 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
         )
         # STRONG emphasis on proper lid orientation to prevent reward hacking
         # (otherwise agent learns to kick-flip the lid onto the box)
-        # reward *= reward_quat  # returns 0 if reward_quat = 0
-        reward += reward_quat
+        reward *= reward_quat
+        # reward += reward_quat
         # Override reward on success
         success = bool(np.linalg.norm(obs[4:7] - self._target_pos) < 0.08)
         if success:
