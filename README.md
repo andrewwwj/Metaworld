@@ -29,8 +29,12 @@ Metaworld is now maintained by the Farama Foundation! You can interact with our 
 The current roadmap for Meta-World can be found [here](https://github.com/Farama-Foundation/Metaworld/issues/409)
 
 ## Installation
+1) To install everything, run:
+```
+pip install git+https://github.com/andrewwwj/Metaworld.git@master#egg=metaworld
+```
 
-Clone the repository and install an editable version locally:
+2) Clone the repository and install an editable version locally:
 
 ```
 git clone https://github.com/andrewwwj/Metaworld.git
