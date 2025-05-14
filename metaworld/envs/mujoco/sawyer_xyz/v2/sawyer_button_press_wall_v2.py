@@ -125,7 +125,8 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
         ), "`reset_model()` must be called before `compute_reward()`."
         del action
         obj = obs[4:7]
-        tcp = self.tcp_center
+        # tcp = self.tcp_center
+        tcp = self.get_body_com("leftclaw")
 
         tcp_to_obj = float(np.linalg.norm(obj - tcp))
         tcp_to_obj_init = float(np.linalg.norm(obj - self.init_tcp))
@@ -146,7 +147,8 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
 
         reward = 0.0
         if tcp_to_obj > 0.07:
-            tcp_status = (1 - obs[3]) / 2.0
+            # tcp_status = (1 - obs[3]) / 2.0
+            tcp_status = max(obs[3], 0.0)
             reward = 2 * reward_utils.hamacher_product(tcp_status, near_button)
         else:
             reward = 2
