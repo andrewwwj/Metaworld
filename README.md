@@ -37,7 +37,7 @@ The current roadmap for Meta-World can be found [here](https://github.com/Farama
 
 Clone the repository and install an editable version locally:
 
-```sh
+```
 git clone https://github.com/andrewwwj/Metaworld.git
 cd Metaworld
 pip install -e .
