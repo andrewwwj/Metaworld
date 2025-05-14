@@ -29,7 +29,7 @@ The current roadmap for Meta-World can be found [here](https://github.com/Farama
 ## Installation
 1) To install everything, run:
 ```
-pip install git+https://github.com/andrewwwj/Metaworld.git@master#egg=metaworld
+pip install -U git+https://github.com/andrewwwj/Metaworld.git@master#egg=metaworld
 ```
 
 2) Clone the repository and install an editable version locally:
