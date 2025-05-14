@@ -118,17 +118,21 @@ class SawyerButtonPressTopdownWallEnvV2(SawyerXYZEnv):
         self, action: npt.NDArray[Any], obs: npt.NDArray[np.float64]
     ) -> tuple[float, float, float, float, float, float]:
         assert (
-            self._target_pos is not None
+                self._target_pos is not None
         ), "`reset_model()` must be called before `compute_reward()`."
         del action
         obj = obs[4:7]
-        tcp = self.tcp_center
-
+        # tcp = self.tcp_center
+        tcp = self.get_body_com("leftclaw")
+        
         tcp_to_obj = float(np.linalg.norm(obj - tcp))
         tcp_to_obj_init = float(np.linalg.norm(obj - self.init_tcp))
         obj_to_target = abs(self._target_pos[2] - obj[2])
+        # scale = np.array([0.5, 0.25, 0.2])
+        # tcp_to_obj = float(np.linalg.norm((obj - tcp) * scale))
+        # tcp_to_obj_init = float(np.linalg.norm((obj - self.init_tcp) * scale))
+        # obj_to_target = abs(self._target_pos[2] - obj[2])
 
-        tcp_closed = 1 - obs[3]
         near_button = reward_utils.tolerance(
             tcp_to_obj,
             bounds=(0, 0.01),
@@ -142,16 +146,11 @@ class SawyerButtonPressTopdownWallEnvV2(SawyerXYZEnv):
             sigmoid="long_tail",
         )
 
+        # tcp_closed = 1 - obs[3]
         # reward = 5 * reward_utils.hamacher_product(tcp_closed, near_button)
-        # if tcp_to_obj <= 0.03:
-        #     reward += 5 * button_pressed
-        reward = 0.0
-        if tcp_to_obj > 0.07:
-            tcp_status = (1 - obs[3]) / 2.0
-            reward = 2 * reward_utils.hamacher_product(tcp_status, near_button)
-        else:
-            reward = 2
-            reward += 2 * (1 + obs[3])
-            reward += 4 * button_pressed**2
-
+        tcp_opened = max(obs[3], 0.0)
+        reward = 5 * reward_utils.hamacher_product(tcp_opened, near_button)
+        if tcp_to_obj <= 0.03:
+            reward += 5 * button_pressed
+        print(reward)
         return (reward, tcp_to_obj, obs[3], obj_to_target, near_button, button_pressed)
