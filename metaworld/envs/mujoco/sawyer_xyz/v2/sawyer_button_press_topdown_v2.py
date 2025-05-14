@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import mujoco
 import numpy as np
 import numpy.typing as npt
 from gymnasium.spaces import Box
@@ -12,7 +13,7 @@ from metaworld.envs.mujoco.utils import reward_utils
 from metaworld.types import InitConfigDict
 
 
-class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
+class SawyerButtonPressTopdownEnvV2(SawyerXYZEnv):
     def __init__(
         self,
         render_mode: RenderMode | None = None,
@@ -21,8 +22,8 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
     ) -> None:
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
-        obj_low = (-0.05, 0.85, 0.1149)
-        obj_high = (0.05, 0.9, 0.1151)
+        obj_low = (-0.1, 0.8, 0.115)
+        obj_high = (0.1, 0.9, 0.115)
 
         super().__init__(
             hand_low=hand_low,
@@ -31,12 +32,11 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
             camera_name=camera_name,
             camera_id=camera_id,
         )
-
         self.init_config: InitConfigDict = {
-            "obj_init_pos": np.array([0.0, 0.9, 0.115], dtype=np.float32),
+            "obj_init_pos": np.array([0, 0.8, 0.115], dtype=np.float32),
             "hand_init_pos": np.array([0, 0.4, 0.2], dtype=np.float32),
         }
-        self.goal = np.array([0, 0.84, 0.12])
+        self.goal = np.array([0, 0.88, 0.1])
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self.hand_init_pos = self.init_config["hand_init_pos"]
 
@@ -46,12 +46,11 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
         self._random_reset_space = Box(
             np.array(obj_low), np.array(obj_high), dtype=np.float64
         )
-
         self.goal_space = Box(np.array(goal_low), np.array(goal_high), dtype=np.float64)
 
     @property
     def model_name(self) -> str:
-        return full_v2_path_for("sawyer_xyz/sawyer_button_press_wall.xml")
+        return full_v2_path_for("sawyer_xyz/sawyer_button_press_topdown.xml")
 
     @SawyerXYZEnv._Decorators.assert_task_is_set
     def evaluate_state(
@@ -65,9 +64,8 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
             near_button,
             button_pressed,
         ) = self.compute_reward(action, obs)
-
         info = {
-            "success": float(obj_to_target <= 0.03),
+            "success": float(obj_to_target <= 0.024),
             "near_object": float(tcp_to_obj <= 0.05),
             "grasp_success": float(tcp_open > 0),
             "grasp_reward": near_button,
@@ -86,7 +84,7 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
         return self.model.geom_name2id("btnGeom")
 
     def _get_pos_objects(self) -> npt.NDArray[Any]:
-        return self.get_body_com("button") + np.array([0.0, -0.193, 0.0])
+        return self.get_body_com("button") + np.array([0.0, 0.0, 0.193])
 
     def _get_quat_objects(self) -> npt.NDArray[Any]:
         return self.data.body("button").xquat
@@ -100,21 +98,15 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
 
     def reset_model(self) -> npt.NDArray[np.float64]:
         self._reset_hand()
-        self._target_pos = self.goal.copy()
-        self.obj_init_pos = self.init_config["obj_init_pos"]
-
         goal_pos = self._get_state_rand_vec()
         self.obj_init_pos = goal_pos
-
         self.model.body("box").pos = self.obj_init_pos
-
-        self._set_obj_xyz(np.array(0))
+        mujoco.mj_forward(self.model, self.data)
         self._target_pos = self._get_site_pos("hole")
 
         self._obj_to_target_init = abs(
-            self._target_pos[1] - self._get_site_pos("buttonStart")[1]
+            self._target_pos[2] - self._get_site_pos("buttonStart")[2]
         )
-
         return self._get_obs()
 
     def compute_reward(
@@ -125,12 +117,11 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
         ), "`reset_model()` must be called before `compute_reward()`."
         del action
         obj = obs[4:7]
-        # tcp = self.tcp_center
-        tcp = self.get_body_com("leftclaw")
+        tcp = self.tcp_center
 
         tcp_to_obj = float(np.linalg.norm(obj - tcp))
         tcp_to_obj_init = float(np.linalg.norm(obj - self.init_tcp))
-        obj_to_target = abs(self._target_pos[1] - obj[1])
+        obj_to_target = abs(self._target_pos[2] - obj[2])
 
         near_button = reward_utils.tolerance(
             tcp_to_obj,
@@ -145,12 +136,11 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
             sigmoid="long_tail",
         )
 
-        reward = 0.0
-        if tcp_to_obj > 0.07:
-            tcp_status = (1 - obs[3]) / 2.0
-            reward = 2 * reward_utils.hamacher_product(tcp_status, near_button)
-        else:
-            reward = 2
-            reward += 2 * (1 + obs[3])
-            reward += 4 * button_pressed**2
+        # tcp_closed = 1 - obs[3]
+        # reward = 5 * reward_utils.hamacher_product(tcp_closed, near_button)
+        tcp_opened = max(obs[3], 0.0)
+        reward = 5 * reward_utils.hamacher_product(tcp_opened, near_button)
+        if tcp_to_obj <= 0.03:
+            reward += 5 * button_pressed
+
         return (reward, tcp_to_obj, obs[3], obj_to_target, near_button, button_pressed)
