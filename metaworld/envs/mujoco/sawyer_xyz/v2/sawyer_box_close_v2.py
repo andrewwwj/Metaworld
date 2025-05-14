@@ -198,16 +198,14 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
                 8.0 * reward_steps[1],
             )
         )
-
+        # STRONG emphasis on proper lid orientation to prevent reward hacking
+        # (otherwise agent learns to kick-flip the lid onto the box)
+        # reward *= reward_quat  # returns 0 if reward_quat = 0
+        reward += reward_quat
         # Override reward on success
         success = bool(np.linalg.norm(obs[4:7] - self._target_pos) < 0.08)
         if success:
             reward = 10.0
-
-        # STRONG emphasis on proper lid orientation to prevent reward hacking
-        # (otherwise agent learns to kick-flip the lid onto the box)
-        reward *= reward_quat
-
         return (
             reward,
             reward_grab,
