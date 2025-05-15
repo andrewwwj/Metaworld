@@ -144,6 +144,7 @@ class SawyerPickOutOfHoleEnvV2(SawyerXYZEnv):
                 sigmoid="long_tail",
             )
         )
+        # Object grasped
         object_grasped = self._gripper_caging_reward(
             action,
             obj,
@@ -154,11 +155,14 @@ class SawyerPickOutOfHoleEnvV2(SawyerXYZEnv):
             desired_gripper_effort=0.1,
             high_density=True,
         )
+        # Object at target
         in_place = reward_utils.tolerance(
             obj_to_target, bounds=(0, 0.02), margin=in_place_margin, sigmoid="long_tail"
         )
         reward = reward_utils.hamacher_product(object_grasped, in_place)
-
+        # Incentive for reaching to the object
+        reward += np.exp(-np.abs(tcp_to_obj))
+        
         near_object = tcp_to_obj < 0.04
         pinched_without_obj = obs[3] < 0.33
         lifted = obj[2] - 0.02 > self.obj_init_pos[2]
@@ -166,10 +170,10 @@ class SawyerPickOutOfHoleEnvV2(SawyerXYZEnv):
         grasp_success = near_object and lifted and not pinched_without_obj
         if grasp_success:
             reward += 1.0 + 5.0 * reward_utils.hamacher_product(in_place, above_floor)
+
         # Maximize reward on success
         if obj_to_target < self.TARGET_RADIUS:
             reward = 10.0
-
         return (
             reward,
             tcp_to_obj,
