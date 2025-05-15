@@ -150,7 +150,7 @@ class SawyerPickPlaceWallEnvV2(SawyerXYZEnv):
         assert (
             self._target_pos is not None and self.obj_init_pos is not None
         ), "`reset_model()` must be called before `compute_reward()`."
-        _TARGET_RADIUS: float = 0.05
+        _TARGET_RADIUS: float = 0.07
         tcp = self.tcp_center
         obj = obs[4:7]
         tcp_opened: float = obs[3]
@@ -195,7 +195,7 @@ class SawyerPickPlaceWallEnvV2(SawyerXYZEnv):
         in_place_and_object_grasped = reward_utils.hamacher_product(
             object_grasped, in_place_part1
         )
-        reward = in_place_and_object_grasped
+        reward = in_place_and_object_grasped + 4.0 * in_place_part1
 
         if (
             tcp_to_obj < 0.02
@@ -208,7 +208,7 @@ class SawyerPickPlaceWallEnvV2(SawyerXYZEnv):
 
         if obj_to_target < _TARGET_RADIUS:
             reward = 10.0
-
+            
         return (
             reward,
             tcp_to_obj,
